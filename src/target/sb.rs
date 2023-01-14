@@ -17,7 +17,7 @@ impl Target for SB {
     }
 
     fn std(&self) -> String {
-        String::from(include_str!("std/std.c"))
+        String::from(include_str!("std/std.prg"))
     }
 
     fn core_prelude(&self) -> String {
@@ -30,133 +30,102 @@ impl Target for SB {
 
     fn begin_entry_point(&self, global_scope_size: i32, memory_size: i32) -> String {
         format!(
-            "int main() {{\nmachine *vm = machine_new({}, {});\n",
+            "MACHINE_NEW {}, {}\n",
             global_scope_size,
             global_scope_size + memory_size,
         )
     }
 
     fn end_entry_point(&self) -> String {
-        String::from("\nmachine_drop(vm);\nreturn 0;\n}")
+        String::from("MACHINE_DROP(vm)\nSTOP\n")
     }
 
     fn establish_stack_frame(&self, arg_size: i32, local_scope_size: i32) -> String {
         format!(
-            "machine_establish_stack_frame(vm, {}, {});\n",
+            "MACHINE_ESTABLISH_STACK_FRAME {}, {}\n",
             arg_size, local_scope_size
         )
     }
 
     fn end_stack_frame(&self, return_size: i32, local_scope_size: i32) -> String {
         format!(
-            "machine_end_stack_frame(vm, {}, {});\n",
+            "MACHINE_END_STACK_FRAME {}, {}\n",
             return_size, local_scope_size
         )
     }
 
     fn load_base_ptr(&self) -> String {
-        String::from("machine_load_base_ptr(vm);\n")
+        String::from("MACHINE_LOAD_BASE_PTR\n")
     }
 
     fn push(&self, n: f64) -> String {
-        format!("machine_push(vm, {});\n", n)
+        format!("MACHINE_PUSH {}\n", n)
     }
 
     fn add(&self) -> String {
-        String::from("machine_add(vm);\n")
+        String::from("MACHINE_ADD\n")
     }
 
     fn subtract(&self) -> String {
-        String::from("machine_subtract(vm);\n")
+        String::from("MACHINE_SUBTRACT\n")
     }
 
     fn multiply(&self) -> String {
-        String::from("machine_multiply(vm);\n")
+        String::from("MACHINE_MULTIPLY\n")
     }
 
     fn divide(&self) -> String {
-        String::from("machine_divide(vm);\n")
+        String::from("MACHINE_DIVIDE\n")
     }
 
     fn sign(&self) -> String {
-        String::from("machine_sign(vm);\n")
+        String::from("MACHINE_SIGN\n")
     }
 
     fn allocate(&self) -> String {
-        String::from("machine_allocate(vm);\n")
+        String::from("MACHINE_ALLOCATE\n")
     }
 
     fn free(&self) -> String {
-        String::from("machine_free(vm);\n")
+        String::from("MACHINE_FREE\n")
     }
 
     fn store(&self, size: i32) -> String {
-        format!("machine_store(vm, {});\n", size)
+        format!("MACHINE_STORE {}\n", size)
     }
 
     fn load(&self, size: i32) -> String {
-        format!("machine_load(vm, {});\n", size)
+        format!("MACHINE_LOAD {}\n", size)
     }
 
     fn fn_header(&self, name: String) -> String {
-        format!("void {}(machine* vm);\n", name)
+        String::from("")
     }
 
     fn fn_definition(&self, name: String, body: String) -> String {
-        format!("void {}(machine* vm) {{ {}}}\n", name, body)
+        format!("DEF {}\n{}\nEND\n", name, body)
     }
 
     fn call_fn(&self, name: String) -> String {
-        format!("{}(vm);\n", name)
+        format!("{}\n", name)
     }
 
     fn call_foreign_fn(&self, name: String) -> String {
-        format!("{}(vm);\n", name)
+        format!("{}\n", name)
     }
 
     fn begin_while(&self) -> String {
-        String::from("while (machine_pop(vm)) {\n")
+        String::from("WHILE MACHINE_POP#()\n")
     }
 
     fn end_while(&self) -> String {
-        String::from("}\n")
+        String::from("WEND\n")
     }
 
     fn compile(&self, code: String) -> Result<()> {
-        let mut child = Command::new("gcc")
-            .arg("-O2")
-            .args(&["-o", &format!("main{}", EXE_SUFFIX)[..]])
-            .args(&["-x", "c", "-"])
-            .stdin(Stdio::piped())
-            .spawn();
-
-        if let Ok(mut child) = child {
-            match child.stdin.as_mut() {
-                Some(stdin) => {
-                    if let Err(error) = stdin.write_all(code.as_bytes()) {
-                        return Result::Err(Error::new(
-                            ErrorKind::Other,
-                            "unable to open write to child stdin",
-                        ));
-                    }
-                }
-                None => {
-                    return Result::Err(Error::new(ErrorKind::Other, "unable to open child stdin"))
-                }
-            }
-
-            match child.wait_with_output() {
-                Ok(_) => return Result::Ok(()),
-                Err(_) => {
-                    return Result::Err(Error::new(ErrorKind::Other, "unable to read child output"))
-                }
-            }
-        } else {
-            // child failed to execute
-            Result::Err(Error::new(
-                ErrorKind::Other,
-                "unable to spawn child gcc proccess",
-            ))
+        if let Ok(_) = write("OUTPUT.prg", code) {
+            return Result::Ok(());
         }
+        Result::Err(Error::new(ErrorKind::Other, "error compiling "))
     }
 }
