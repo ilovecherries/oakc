@@ -37,7 +37,7 @@ impl Target for SB {
     }
 
     fn end_entry_point(&self) -> String {
-        String::from("MACHINE_DROP(vm)\nSTOP\n")
+        String::from("MACHINE_DROP\nSTOP\n")
     }
 
     fn establish_stack_frame(&self, arg_size: i32, local_scope_size: i32) -> String {
